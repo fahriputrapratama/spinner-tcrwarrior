@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Spinner Doorprize 500</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #0f172a; color: white; margin: 0; padding: 20px; }
+        #wheel-container { position: relative; width: 400px; margin: 30px auto; }
+        canvas { width: 100%; border-radius: 50%; border: 10px solid #1e293b; box-shadow: 0 0 50px rgba(0,0,0,0.5); transition: transform 5s cubic-bezier(0.1, 0, 0.1, 1); }
+        #pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid #ef4444; z-index: 10; }
+        button { padding: 15px 40px; font-size: 20px; background: #3b82f6; color: white; border: none; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #2563eb; transform: scale(1.05); }
+        button:disabled { background: #475569; cursor: not-allowed; }
+        #winner-box { margin-top: 30px; padding: 20px; border-radius: 15px; background: #1e293b; display: none; border: 2px solid #3b82f6; }
+        .count-info { color: #94a3b8; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>🎊 DOORPRIZE SPINNER 🎊</h1>
+    <p class="count-info">Sisa Peserta: <span id="count">{{ total }}</span> / 500</p>
+
+    <div id="wheel-container">
+        <div id="pointer"></div>
+        <canvas id="wheel" width="500" height="500"></canvas>
+    </div>
+
+    <button id="spinBtn">PUTAR RODA</button>
+
+    <div id="winner-box">
+        <div style="font-size: 18px;">Selamat Kepada:</div>
+        <div id="winner-name" style="font-size: 36px; font-weight: bold; color: #fbbf24; margin-top: 10px;"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const btn = document.getElementById('spinBtn');
+        const winnerBox = document.getElementById('winner-box');
+
+        // Menggambar roda visual (hanya butuh 20 slice agar tidak lag)
+        function drawWheel() {
+            const slices = 20;
+            const arc = (2 * Math.PI) / slices;
+            for (let i = 0; i < slices; i++) {
+                ctx.beginPath();
+                ctx.moveTo(250, 250);
+                ctx.arc(250, 250, 250, i * arc, (i + 1) * arc);
+                ctx.fillStyle = i % 2 === 0 ? "#1e293b" : "#334155";
+                ctx.fill();
+                ctx.strokeStyle = "#475569";
+                ctx.stroke();
+            }
+        }
+
+        btn.onclick = async () => {
+            btn.disabled = true;
+            winnerBox.style.display = 'none';
+
+            // 1. Panggil Backend untuk menentukan pemenang & hapus dari Redis
+            const res = await fetch('/kocok', { method: 'POST' });
+            const data = await res.json();
+
+            if (data.error) {
+                alert(data.error);
+                btn.disabled = false;
+                return;
+            }
+
+            // 2. Jalankan animasi putar
+            const extraSpins = 3600; // 10 putaran
+            const randomStop = Math.floor(Math.random() * 360);
+            canvas.style.transform = `rotate(${extraSpins + randomStop}deg)`;
+
+            // 3. Tampilkan hasil setelah animasi selesai (5 detik)
+            setTimeout(() => {
+                document.getElementById('winner-name').innerText = data.pemenang;
+                document.getElementById('count').innerText = data.sisa_jumlah;
+                winnerBox.style.display = 'block';
+
+                // Reset posisi roda agar bisa diputar lagi
+                setTimeout(() => {
+                    canvas.style.transition = "none";
+                    canvas.style.transform = "rotate(0deg)";
+                    btn.disabled = false;
+                    setTimeout(() => canvas.style.transition = "transform 5s cubic-bezier(0.1, 0, 0.1, 1)", 50);
+                }, 1000);
+            }, 5000);
+        };
+
+        drawWheel();
+    </script>
+</body>
+</html>
