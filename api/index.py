@@ -1,54 +1,26 @@
-from flask import Flask, render_template, jsonify
-from vercel_kv import KV
-import random
+from flask import Flask, render_template, request, jsonify
+import requests
 
-# Inisialisasi Flask (template folder diarahkan ke luar folder api)
-app = Flask(__name__, template_folder='../templates')
-kv = KV()
+app = Flask(__name__, 
+            template_folder='../templates', 
+            static_folder='../static')
 
-DB_KEY = "daftar_peserta"
-
-def get_or_init_names():
-    # Ambil data dari Redis
-    names = kv.get(DB_KEY)
-    if names is None:
-        # Jika DB kosong (pertama kali run), isi 500 nama
-        names = [f"Peserta {i}" for i in range(1, 501)]
-        kv.set(DB_KEY, names)
-    return names
+URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbxswO_yhj0fj0iJ1k-kdVE_hhRiKYqEMJWy_kvV_VZxiolZiK86hZrXXGH3ZicwZGDO/exec'
 
 @app.route('/')
 def index():
-    names = get_or_init_names()
-    return render_template('index.html', total=len(names))
+    return render_template('index.html')
 
-@app.route('/kocok', methods=['POST'])
-def kocok():
-    names = kv.get(DB_KEY) or []
-    
-    if not names:
-        return jsonify({"error": "Daftar peserta sudah habis!"}), 400
+@app.route('/get-peserta')
+def get_peserta():
+    r = requests.get(URL_SCRIPT)
+    return jsonify(r.json())
 
-    # Pilih pemenang secara acak
-    pemenang = random.choice(names)
-    
-    # Hapus pemenang dari daftar
-    names.remove(pemenang)
-    
-    # Simpan kembali daftar terbaru ke Redis
-    kv.set(DB_KEY, names)
+@app.route('/pilih-pemenang', methods=['POST'])
+def pilih_pemenang():
+    nama = request.json.get('nama')
+    requests.post(URL_SCRIPT, json={'nama': nama})
+    return jsonify({"status": "success"})
 
-    return jsonify({
-        "pemenang": pemenang,
-        "sisa_jumlah": len(names)
-    })
-
-@app.route('/reset-ulang')
-def reset():
-    # Fitur untuk mengembalikan ke 500 nama
-    names = [f"Peserta {i}" for i in range(1, 501)]
-    kv.set(DB_KEY, names)
-    return "Data telah direset ke 500 nama."
-
-# Diperlukan untuk Vercel
-app = app
+if __name__ == "__main__":
+    app.run(debug=True)

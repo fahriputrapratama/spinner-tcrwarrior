@@ -2,93 +2,207 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Spinner Doorprize 500</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Wheel Doorprize - TCR</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #0f172a; color: white; margin: 0; padding: 20px; }
-        #wheel-container { position: relative; width: 400px; margin: 30px auto; }
-        canvas { width: 100%; border-radius: 50%; border: 10px solid #1e293b; box-shadow: 0 0 50px rgba(0,0,0,0.5); transition: transform 5s cubic-bezier(0.1, 0, 0.1, 1); }
-        #pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid #ef4444; z-index: 10; }
-        button { padding: 15px 40px; font-size: 20px; background: #3b82f6; color: white; border: none; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        button:hover { background: #2563eb; transform: scale(1.05); }
-        button:disabled { background: #475569; cursor: not-allowed; }
-        #winner-box { margin-top: 30px; padding: 20px; border-radius: 15px; background: #1e293b; display: none; border: 2px solid #3b82f6; }
-        .count-info { color: #94a3b8; margin-bottom: 20px; }
+        :root {
+            --primary: #e74c3c;
+            --secondary: #27ae60;
+            --dark: #2c3e50;
+        }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #ecf0f1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+        h1 { color: var(--dark); margin-top: 20px; }
+
+        /* Container Roda */
+        .wheel-container { position: relative; margin: 30px auto; width: 350px; height: 350px; }
+        
+        .pointer {
+            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; 
+            border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 35px solid var(--primary);
+            z-index: 10;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+        }
+
+        canvas { 
+            border-radius: 50%; 
+            box-shadow: 0 0 25px rgba(0,0,0,0.3); 
+            transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1); 
+        }
+
+        .controls { margin-top: 20px; }
+        button { 
+            padding: 15px 40px; font-size: 20px; font-weight: bold;
+            background: var(--secondary); color: white; border: none; border-radius: 50px; 
+            cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+        button:hover { transform: scale(1.05); }
+        button:disabled { background: #bdc3c7; cursor: not-allowed; }
+
+        /* Modal */
+        #modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 40px; border-radius: 20px; text-align: center;
+            max-width: 400px; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-content h2 { font-size: 30px; color: var(--dark); margin: 0; }
+        .modal-content p { font-size: 40px; color: var(--primary); font-weight: bold; margin: 20px 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        #logo-source { display: none; }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <h1>🎊 DOORPRIZE SPINNER 🎊</h1>
-    <p class="count-info">Sisa Peserta: <span id="count">{{ total }}</span> / 500</p>
+    <h1>🎡 Road To TCR Anniversarun2nd 🎡</h1>
 
-    <div id="wheel-container">
-        <div id="pointer"></div>
-        <canvas id="wheel" width="500" height="500"></canvas>
+    <img id="logo-source" src="{{ url_for('static', filename='image/logo.png') }}" alt="Logo">
+
+    <div class="wheel-container">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="350" height="350"></canvas>
     </div>
 
-    <button id="spinBtn">PUTAR RODA</button>
+    <div class="controls">
+        <button id="btn-spin" onclick="spinWheel()">PUTAR RODA!</button>
+    </div>
 
-    <div id="winner-box">
-        <div style="font-size: 18px;">Selamat Kepada:</div>
-        <div id="winner-name" style="font-size: 36px; font-weight: bold; color: #fbbf24; margin-top: 10px;"></div>
+    <div id="modal">
+        <div class="modal-content">
+            <h2>🎉 SELAMAT! 🎉</h2>
+            <div style="font-size: 18px; margin-top: 10px;">Pemenang Terpilih:</div>
+            <p id="winner-name"></p>
+            <button onclick="lanjutRefresh()" style="background: var(--dark); width: 100%; color: white; padding: 10px; border-radius: 10px; cursor: pointer;">LANJUT & REFRESH DATA</button>
+        </div>
     </div>
 
     <script>
+        let daftarPeserta = [];
         const canvas = document.getElementById('wheel');
         const ctx = canvas.getContext('2d');
-        const btn = document.getElementById('spinBtn');
-        const winnerBox = document.getElementById('winner-box');
+        let currentRotation = 0;
 
-        // Menggambar roda visual (hanya butuh 20 slice agar tidak lag)
-        function drawWheel() {
-            const slices = 20;
-            const arc = (2 * Math.PI) / slices;
-            for (let i = 0; i < slices; i++) {
-                ctx.beginPath();
-                ctx.moveTo(250, 250);
-                ctx.arc(250, 250, 250, i * arc, (i + 1) * arc);
-                ctx.fillStyle = i % 2 === 0 ? "#1e293b" : "#334155";
-                ctx.fill();
-                ctx.strokeStyle = "#475569";
-                ctx.stroke();
+        async function loadPeserta() {
+            try {
+                const res = await fetch('/get-peserta');
+                daftarPeserta = await res.json();
+                drawWheel();
+            } catch (err) {
+                console.error("Gagal load data peserta.");
             }
         }
 
-        btn.onclick = async () => {
-            btn.disabled = true;
-            winnerBox.style.display = 'none';
-
-            // 1. Panggil Backend untuk menentukan pemenang & hapus dari Redis
-            const res = await fetch('/kocok', { method: 'POST' });
-            const data = await res.json();
-
-            if (data.error) {
-                alert(data.error);
-                btn.disabled = false;
+        function drawWheel() {
+            const numSegments = daftarPeserta.length;
+            if (numSegments === 0) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                document.getElementById('btn-spin').disabled = true;
                 return;
             }
+            
+            const angle = (2 * Math.PI) / numSegments;
+            const colors = ['#f1c40f', '#e67e22', '#e74c3c', '#9b59b6', '#3498db', '#1abc9c'];
 
-            // 2. Jalankan animasi putar
-            const extraSpins = 3600; // 10 putaran
-            const randomStop = Math.floor(Math.random() * 360);
-            canvas.style.transform = `rotate(${extraSpins + randomStop}deg)`;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Gambar Segmen
+            daftarPeserta.forEach((p, i) => {
+                const startAngle = i * angle;
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(175, 175);
+                ctx.arc(175, 175, 175, startAngle, startAngle + angle);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,0.4)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.save();
+                ctx.translate(175, 175);
+                ctx.rotate(startAngle + angle / 2);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 13px sans-serif";
+                ctx.textAlign = "right";
+                ctx.fillText(p.nama.substring(0, 15), 160, 5);
+                ctx.restore();
+            });
 
-            // 3. Tampilkan hasil setelah animasi selesai (5 detik)
+            // Gambar Lingkaran Tengah & Logo
+            ctx.beginPath();
+            ctx.arc(175, 175, 50, 0, 2 * Math.PI);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.stroke();
+
+            const img = document.getElementById('logo-source');
+            if (img.complete) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(175, 175, 35, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.drawImage(img, 140, 140, 70, 70);
+                ctx.restore();
+            }
+        }
+
+        function spinWheel() {
+            if (daftarPeserta.length === 0) return;
+            const btn = document.getElementById('btn-spin');
+            btn.disabled = true;
+
+            const randomExtra = Math.floor(Math.random() * 360);
+            const totalRotation = currentRotation + 1800 + randomExtra;
+            currentRotation = totalRotation;
+
+            canvas.style.transform = `rotate(${totalRotation}deg)`;
+
+            setTimeout(async () => {
+                const degrees = totalRotation % 360;
+                const segmentAngle = 360 / daftarPeserta.length;
+                
+                // Kalkulasi Indeks Berdasarkan Pointer Jam 12 (270 derajat)
+                let winningAngle = (270 - degrees) % 360;
+                if (winningAngle < 0) winningAngle += 360;
+                const index = Math.floor(winningAngle / segmentAngle);
+                
+                const pemenang = daftarPeserta[index].nama;
+                document.getElementById('winner-name').innerText = pemenang;
+                document.getElementById('modal').style.display = 'flex';
+
+                await fetch('/pilih-pemenang', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nama: pemenang})
+                });
+            }, 4000);
+        }
+
+        async function lanjutRefresh() {
+            document.getElementById('modal').style.display = 'none';
+            canvas.style.transition = 'none';
+            canvas.style.transform = 'rotate(0deg)';
+            currentRotation = 0;
+            
+            await loadPeserta();
+            
             setTimeout(() => {
-                document.getElementById('winner-name').innerText = data.pemenang;
-                document.getElementById('count').innerText = data.sisa_jumlah;
-                winnerBox.style.display = 'block';
+                canvas.style.transition = 'transform 4s cubic-bezier(0.15, 0, 0.15, 1)';
+                document.getElementById('btn-spin').disabled = false;
+            }, 50);
+        }
 
-                // Reset posisi roda agar bisa diputar lagi
-                setTimeout(() => {
-                    canvas.style.transition = "none";
-                    canvas.style.transform = "rotate(0deg)";
-                    btn.disabled = false;
-                    setTimeout(() => canvas.style.transition = "transform 5s cubic-bezier(0.1, 0, 0.1, 1)", 50);
-                }, 1000);
-            }, 5000);
-        };
-
-        drawWheel();
+        window.onload = loadPeserta;
     </script>
 </body>
 </html>

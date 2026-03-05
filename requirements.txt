@@ -1,2 +1,2 @@
-flask
-vercel-kv-sdk
+Flask
+requests
