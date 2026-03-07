@@ -3,61 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magic Wheel Doorprize - TCR</title>
+    <title>Magic Wheel Doorprize - Ramadan Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #e74c3c;
-            --secondary: #27ae60;
-            --dark: #2c3e50;
+            --night-blue: #1a2a3a;
+            --royal-blue: #3b8fbd;
+            --gold: #d4af37;
+            --gold-light: #f1c40f;
+            --sand: #f3e5ab;
         }
+
         body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: #ecf0f1; 
+            font-family: 'Poppins', sans-serif; 
+            /* Background Langit Malam Ramadan */
+            background: radial-gradient(circle at center, #2c3e50 0%, #000000 100%);
             display: flex; 
             flex-direction: column; 
             align-items: center; 
             min-height: 100vh; 
             margin: 0; 
+            overflow-x: hidden;
+            color: var(--sand);
         }
-        h1 { color: var(--dark); margin-top: 20px; }
 
-        /* Container Roda */
-        .wheel-container { position: relative; margin: 30px auto; width: 350px; height: 350px; }
+        /* Ornamen Ramadan */
+        .ramadan-decor {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .lantern { width: 80px; filter: drop-shadow(0 0 10px var(--gold-light)); animation: swing 3s infinite ease-in-out; }
+        .moon { top: 20px; right: 30px; width: 100px; opacity: 0.8; }
+
+        @keyframes swing {
+            0%, 100% { transform: rotate(-5deg); transform-origin: top; }
+            50% { transform: rotate(5deg); transform-origin: top; }
+        }
+
+        h1 { 
+            font-family: 'Amiri', serif;
+            color: var(--gold); 
+            margin-top: 40px; 
+            font-size: 3rem;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+            letter-spacing: 2px;
+            z-index: 2;
+        }
+
+        /* Container Roda dengan Frame Kubah Islam */
+        .main-card {
+            position: relative;
+            z-index: 2;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 50% 50% 20px 20px; /* Menyerupai bentuk kubah atasnya */
+            border: 2px solid var(--gold);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5), inset 0 0 20px rgba(212, 175, 55, 0.2);
+            margin-top: 20px;
+        }
+
+        .wheel-container { 
+            position: relative; 
+            width: 350px; 
+            height: 350px; 
+        }
         
         .pointer {
             position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
             width: 0; height: 0; 
-            border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 35px solid var(--primary);
+            border-left: 15px solid transparent; border-right: 15px solid transparent; 
+            border-top: 35px solid var(--gold-light);
             z-index: 10;
-            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+            filter: drop-shadow(0 0 10px var(--gold));
         }
 
         canvas { 
             border-radius: 50%; 
-            box-shadow: 0 0 25px rgba(0,0,0,0.3); 
+            border: 10px solid var(--night-blue);
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
             transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1); 
         }
 
-        .controls { margin-top: 20px; }
-        button { 
-            padding: 15px 40px; font-size: 20px; font-weight: bold;
-            background: var(--secondary); color: white; border: none; border-radius: 50px; 
-            cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        .controls { margin-top: 30px; text-align: center; }
+        
+        button#btn-spin { 
+            padding: 15px 60px; font-size: 20px; font-weight: bold;
+            background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
+            color: var(--night-blue); border: none; border-radius: 50px; 
+            cursor: pointer; transition: 0.3s; 
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+            font-family: 'Poppins', sans-serif;
+            text-transform: uppercase;
         }
-        button:hover { transform: scale(1.05); }
-        button:disabled { background: #bdc3c7; cursor: not-allowed; }
 
-        /* Modal */
+        button#btn-spin:hover { transform: scale(1.05); filter: brightness(1.2); }
+        button#btn-spin:disabled { background: #555; color: #888; cursor: not-allowed; }
+
+        /* Modal Pemenang */
         #modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center;
         }
         .modal-content {
-            background: white; padding: 40px; border-radius: 20px; text-align: center;
-            max-width: 400px; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: var(--night-blue); 
+            padding: 40px; border-radius: 20px; text-align: center;
+            max-width: 400px; border: 3px solid var(--gold);
+            box-shadow: 0 0 40px var(--gold);
+            animation: popIn 0.5s ease-out;
         }
-        .modal-content h2 { font-size: 30px; color: var(--dark); margin: 0; }
-        .modal-content p { font-size: 40px; color: var(--primary); font-weight: bold; margin: 20px 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .modal-content h2 { font-size: 28px; color: var(--gold); margin: 0; font-family: 'Amiri', serif; }
+        .modal-content p { font-size: 40px; color: #fff; font-weight: bold; margin: 20px 0; }
         
         #logo-source { display: none; }
         @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -65,29 +122,37 @@
 </head>
 <body>
 
-    <h1>🎡 Road To TCR Anniversarun2nd 🎡</h1>
+    <img src="https://cdn-icons-png.flaticon.com/512/2275/2275139.png" class="ramadan-decor lantern" style="left: 5%; top: 0;">
+    <img src="https://cdn-icons-png.flaticon.com/512/2275/2275139.png" class="ramadan-decor lantern" style="right: 5%; top: 20px; animation-delay: 1s;">
+    <img src="https://cdn-icons-png.flaticon.com/512/1823/1823324.png" class="ramadan-decor moon">
 
-    <img id="logo-source" src="{{ url_for('static', filename='image/logo.png') }}" alt="Logo">
+    <h1>Mubarak Giveaway</h1>
 
-    <div class="wheel-container">
-        <div class="pointer"></div>
-        <canvas id="wheel" width="350" height="350"></canvas>
-    </div>
+    <div class="main-card">
+        <img id="logo-source" src="{{ url_for('static', filename='image/logo.png') }}" alt="Logo">
 
-    <div class="controls">
-        <button id="btn-spin" onclick="spinWheel()">PUTAR RODA!</button>
+        <div class="wheel-container">
+            <div class="pointer"></div>
+            <canvas id="wheel" width="350" height="350"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="btn-spin" onclick="spinWheel()">PUTAR KEBERUNTUNGAN</button>
+        </div>
     </div>
 
     <div id="modal">
         <div class="modal-content">
-            <h2>🎉 SELAMAT! 🎉</h2>
-            <div style="font-size: 18px; margin-top: 10px;">Pemenang Terpilih:</div>
+            <div style="font-size: 50px;">🌙</div>
+            <h2>MASYA ALLAH, SELAMAT!</h2>
+            <div style="font-size: 16px; margin-top: 10px; color: var(--sand);">Pemenang Terpilih:</div>
             <p id="winner-name"></p>
-            <button onclick="lanjutRefresh()" style="background: var(--dark); width: 100%; color: white; padding: 10px; border-radius: 10px; cursor: pointer;">LANJUT & REFRESH DATA</button>
+            <button onclick="lanjutRefresh()" style="background: var(--gold); width: 100%; color: var(--night-blue); padding: 12px; border-radius: 10px; cursor: pointer; font-weight: bold; border: none;">ALHAMDULILLAH, LANJUT</button>
         </div>
     </div>
 
     <script>
+        // --- LOGIKA JS ASLI (TIDAK DIUBAH) ---
         let daftarPeserta = [];
         const canvas = document.getElementById('wheel');
         const ctx = canvas.getContext('2d');
@@ -112,11 +177,11 @@
             }
             
             const angle = (2 * Math.PI) / numSegments;
-            const colors = ['#f1c40f', '#e67e22', '#e74c3c', '#9b59b6', '#3498db', '#1abc9c'];
+            // Warna Segmen Nuansa Biru Tua, Emas, dan Navy
+            const colors = ['#1a2a3a', '#3b8fbd', '#d4af37', '#2c3e50', '#2980b9', '#b8860b'];
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Gambar Segmen
             daftarPeserta.forEach((p, i) => {
                 const startAngle = i * angle;
                 ctx.beginPath();
@@ -124,8 +189,7 @@
                 ctx.moveTo(175, 175);
                 ctx.arc(175, 175, 175, startAngle, startAngle + angle);
                 ctx.fill();
-                ctx.strokeStyle = "rgba(255,255,255,0.4)";
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = "rgba(255,255,255,0.1)";
                 ctx.stroke();
                 
                 ctx.save();
@@ -138,12 +202,10 @@
                 ctx.restore();
             });
 
-            // Gambar Lingkaran Tengah & Logo
             ctx.beginPath();
             ctx.arc(175, 175, 50, 0, 2 * Math.PI);
             ctx.fillStyle = "white";
             ctx.fill();
-            ctx.stroke();
 
             const img = document.getElementById('logo-source');
             if (img.complete) {
@@ -171,7 +233,6 @@
                 const degrees = totalRotation % 360;
                 const segmentAngle = 360 / daftarPeserta.length;
                 
-                // Kalkulasi Indeks Berdasarkan Pointer Jam 12 (270 derajat)
                 let winningAngle = (270 - degrees) % 360;
                 if (winningAngle < 0) winningAngle += 360;
                 const index = Math.floor(winningAngle / segmentAngle);
